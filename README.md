@@ -9,10 +9,10 @@ Testing engine for https://github.com/9il/atmosphere_gm Statistical package.
 
 ### Column name prefixes
 1. GLM - fixed alpha, gradient descent
-2. СLM - fixed alpha, coordinate descent (all coordinates per one iteration)
+2. СLM - fixed alpha, coordinate descent (all coordinates per iteration)
 3. NVMME - floating alpha, EM
 4. NVMMG - floating alpha, EM and gradient descent
-5. NVMMG - floating alpha, EM and coordinate descent (all coordinates per one iteration)
+5. NVMMG - floating alpha, EM and coordinate descent (all coordinates per iteration)
 
 ### Column name suffixes
 1. _iter - count of iterations (max 1000)
