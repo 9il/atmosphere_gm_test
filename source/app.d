@@ -61,6 +61,7 @@ void main()
 		immutable sample = folder.buildPath("data", input.fileName).readText.splitter.map!(to!double).array;
 		immutable pdfs = grid.map!(u => immutable NormalVarianceMeanMixture!double.PDF(input.alpha, u)).array;
 		immutable maxIter = 1000;
+		immutable minIter = 100;
 
 		///Common algorithms
 		foreach(LM; TypeTuple!(
@@ -78,9 +79,7 @@ void main()
 					(log2LikelihoodPrev, log2Likelihood) 
 					{
 						iterCount++;
-						if(iterCount >= maxIter)
-							return true;
-						return log2Likelihood - log2LikelihoodPrev <= eps;
+						return iterCount >= maxIter || log2Likelihood - log2LikelihoodPrev <= eps;
 					});				
 			}
 			catch (FeaturesException e)
@@ -111,9 +110,7 @@ void main()
 					(alphaPrev, alpha, double log2LikelihoodPrev, double log2Likelihood)
 					{
 						iterCount++;
-						if(iterCount >= maxIter)
-							return true;
-						return log2Likelihood - log2LikelihoodPrev <= eps;
+						return iterCount >= maxIter || iterCount >= minIter && log2Likelihood - log2LikelihoodPrev <= eps;
 					});				
 			}
 			catch (FeaturesException e)
