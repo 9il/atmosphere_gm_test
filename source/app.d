@@ -75,12 +75,12 @@ void main()
 			{
 				optimizer.put(pdfs, sample);
 				optimizer.optimize( ///optimization
-					(sumOfLog2sValuePrev, sumOfLog2sValue) 
+					(log2LikelihoodPrev, log2Likelihood) 
 					{
 						iterCount++;
 						if(iterCount >= maxIter)
 							return true;
-						return sumOfLog2sValue - sumOfLog2sValuePrev <= eps;
+						return log2Likelihood - log2LikelihoodPrev <= eps;
 					});				
 			}
 			catch (FeaturesException e)
