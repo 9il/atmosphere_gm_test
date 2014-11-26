@@ -1,7 +1,7 @@
 atmosphere_gm_test
 ==================
 
-Testing engine for https://github.com/9il/atmosphere_gm Statistical package.
+Testing engine for [Atmosphere GM](https://github.com/9il/atmosphere_gm) Statistical package.
 
 # Name conversion
 
