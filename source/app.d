@@ -66,7 +66,8 @@ void main()
 		///Common algorithms
 		foreach(LM; TypeTuple!(
 			  GradientLikelihoodMaximization, 
-			CoordinateLikelihoodMaximization))
+			CoordinateLikelihoodMaximization,
+			))
 		{
 			StopWatch sw;
 			size_t iterCount;
@@ -74,12 +75,15 @@ void main()
 			sw.start;
 			try
 			{
-				optimizer.put(pdfs, sample);
+				optimizer.putAndSetWeightsInProportionToLikelihood(pdfs, sample);
 				optimizer.optimize( ///optimization
 					(log2LikelihoodPrev, log2Likelihood) 
 					{
 						iterCount++;
+						static if(__traits(isSame, LM , CoordinateLikelihoodMaximization))
+							auto maxIter = maxIter / 10;
 						return iterCount >= maxIter || log2Likelihood - log2LikelihoodPrev <= eps;
+
 					});				
 			}
 			catch (FeaturesException e)
