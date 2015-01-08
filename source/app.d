@@ -1,9 +1,14 @@
 import core.sync.mutex;
 import std.algorithm, std.conv, std.csv, std.datetime, std.file, std.format, std.functional, std.math, 
-	std.parallelism, std.path, std.range, std.stdio;
+	std.parallelism, std.path, std.range, std.stdio, std.random;
 
 import atmosphere;
 import distribution;
+
+void main()
+{
+	main2();
+}
 
 immutable CSVInputHead = "count, nu, alpha, beta, mu, lambda, q95, q99, fileName";
 immutable CSVHead = 
@@ -22,9 +27,12 @@ class GHypCDF: NumericCDF!real
 	this(real lambda, GHypChiPsi!real params)
 	{
 		immutable mu = 0;
-		auto pdf = new GeneralizedHyperbolicPDF!real(lambda, params.alpha, params.beta, params.delta, mu);
-		immutable expectation = E_GHyp!real(lambda, params.beta, params.chi, params.psi);
-		super(pdf, [expectation]);	
+		with(params)
+		{
+			auto pdf = new GeneralizedHyperbolicPDF!real(lambda, alpha, beta, delta, mu);
+			immutable expectation = E_GHyp!real(lambda, beta, chi, psi);				
+			super(pdf, [expectation]);
+		}
 	}
 }
 
@@ -36,7 +44,7 @@ class GHypQuantile : NumericQuantile!real
 	}
 }
 
-void main()
+void main2()
 {
 	auto inputs = folder.buildPath("input.csv").readText.csvReader!(string[string])(null).array;
 
@@ -47,7 +55,7 @@ void main()
 
 	int fc;
 
-	foreach(i, input; inputs)
+	foreach(input; inputs.filter!`a["size"] = "10000"`)
 	{
 		immutable mu = input["p_beta"].to!double;
 		assert(mu == 0);
@@ -55,6 +63,28 @@ void main()
 		immutable params = GHypChiPsi!real(input["p_alpha"].to!double, input["p_mu"].to!double, input["p_lambda"].to!double);
 		immutable oq95 = input["q_95"].to!double;
 		immutable oq99 = input["q_99"].to!double;
+		auto fn = input["p_tex"];
+		immutable sample = folder.buildPath("data", fn).readText.splitter.map!(to!double).array;
+		assert(sample.length);
+		auto minv = sample.reduce!min;
+		auto maxv = sample.reduce!max;
+		//writeln(minv, maxv);
+		auto fout = File(folder.buildPath("data", fn)~".txt", "w");
+		auto frng = File(folder.buildPath("data", fn)~".rn", "w");
+		scope(exit) fout.close;
+		auto pdf = new GeneralizedHyperbolicPDF!real(lambda, params.alpha, params.beta, params.delta, 0);
+		auto rng = new GeneralizedHyperbolicRNG!real(rndGen, lambda, params.beta, params.chi, params.psi);
+		foreach(i; 0..100000)
+		{
+			frng.writeln(rng.front);
+		}
+		foreach(i; 0..1000)
+		{
+			auto x = minv + i*(maxv-minv)/1000;
+			fout.write(x);
+			fout.write(" ");
+			fout.writeln(pdf(x));
+		}
 		//writeln(i);
 		//writeln(params);
 		try
