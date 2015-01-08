@@ -1,7 +1,9 @@
 import core.sync.mutex;
 import std.algorithm, std.conv, std.csv, std.datetime, std.file, std.format, std.functional, std.math, 
 	std.parallelism, std.path, std.range, std.stdio;
+
 import atmosphere;
+import distribution;
 
 immutable CSVInputHead = "count, nu, alpha, beta, mu, lambda, q95, q99, fileName";
 immutable CSVHead = 
@@ -14,7 +16,77 @@ immutable CSVHead =
 	"unused";
 immutable folder = "data/GH";
 
+
+class GHypCDF: NumericCDF!real
+{
+	this(real lambda, GHypChiPsi!real params)
+	{
+		immutable mu = 0;
+		auto pdf = new GeneralizedHyperbolicPDF!real(lambda, params.alpha, params.beta, params.delta, mu);
+		immutable expectation = E_GHyp!real(lambda, params.beta, params.chi, params.psi);
+		super(pdf, [expectation]);	
+	}
+}
+
+class GHypQuantile : NumericQuantile!real
+{
+	this(real lambda, GHypChiPsi!real params)
+	{
+		super(new GHypCDF(lambda, params), -1000, 1000);	
+	}
+}
+
 void main()
+{
+	auto inputs = folder.buildPath("input.csv").readText.csvReader!(string[string])(null).array;
+
+	immutable lambdas = [0.15, 0.5, 1.4];
+	immutable betas = [-0.5, 0.05, 0.2, 0.7, 2, 5];
+	immutable chis = [0.7, 1.8];
+	immutable psis = [0.1, 0.6, 1.1, 4];
+
+	int fc;
+
+	foreach(i, input; inputs)
+	{
+		immutable mu = input["p_beta"].to!double;
+		assert(mu == 0);
+		immutable lambda = input["p_nu"].to!double;
+		immutable params = GHypChiPsi!real(input["p_alpha"].to!double, input["p_mu"].to!double, input["p_lambda"].to!double);
+		immutable oq95 = input["q_95"].to!double;
+		immutable oq99 = input["q_99"].to!double;
+		//writeln(i);
+		//writeln(params);
+		try
+		{
+			auto cdf = new GHypCDF(lambda, params);
+			//writeln("created");
+			//writeln(cdf(10));		
+			auto qf = new GHypQuantile(lambda, params);
+			//auto l = qf(0.5);
+			auto q95 = qf(0.95);
+			auto q99 = qf(0.99);
+			assert(approxEqual(q95, oq95));
+			assert(approxEqual(q99, oq99));
+			writeln(lambda, params);
+			writefln("q95 = %s oq95 = %s", q95, oq95);
+			writefln("q99 = %s oq99 = %s", q99, oq99);
+		}
+		catch(Exception e)
+		{
+			writeln(lambda, params);
+			writeln(e.msg);
+		immutable expectation = E_GHyp!real(lambda, params.beta, params.chi, params.psi);
+		immutable variance = V_GHyp!real(lambda, params.beta, params.chi, params.psi);
+		auto divs = [-3, -1, 0, 1, 3].map!(x => x * variance + expectation).array;
+		divs.writeln;
+			fc++;
+		}
+	}
+	writeln("fails count = ", fc);
+}
+
+void Main()
 {
 	writeln("Total threads: ", totalCPUs);
 	auto fout = File(folder.buildPath("output.csv"), "w");

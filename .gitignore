@@ -7,3 +7,7 @@ __dummy.html
 *.sublime-project
 
 *.sublime-workspace
+
+dub.selections.json
+
+test
