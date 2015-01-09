@@ -29,9 +29,10 @@ immutable gridSize         = 50;
 immutable eps              = 1e-3;
 immutable maxIter          = 1000;
 immutable minIter          = 100;
+immutable CSVHead          = `sampleSize,lambda,beta,chi,psi,algorithm,iterations,time ms,log2Likelihood,betaEst`;
+
 // lambda, beta, chi, psi, sampleSize
 alias ParamsTuple          = Tuple!(double, double, double, double, int);
-immutable CSVHead = `sampleSize,lambda,beta,chi,psi,algorithm,iterations,time ms,log2Likelihood,betaEst`;
 
 void main()
 {
