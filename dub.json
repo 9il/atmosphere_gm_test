@@ -3,28 +3,21 @@
 	"description": "Statistical package atmosphere_gm, test",
 	"homepage": "http://github.com/9il/atmosphere_gm_test",
 	"copyright": "Copyright © 2014 Ilya Yaroshenko",
+	"targetType": "executable",
 	"authors": [
 		"Ilya Yaroshenko"
 	],
 	"dependencies": {
 		"atmosphere_gm": ">=0.0.8"
 	},
-	"dflags": ["-O", "-inline"],
 	"license": "Subject to the terms of the MIT license, as written in the included LICENSE.md file.",
-	"configurations": [
-		{
-			"name": "application",
-			"targetType": "executable"
-		},
-		{
-			"name": "parallel_application",
-			"versions": ["atmosphere_gm_parallel"],
-			"targetType": "executable"
-		}
-	],
 	"buildTypes": {
 		"debug": {
 			"buildOptions": ["debugMode", "optimize"]
+		},
+		"travis": {
+			"buildOptions": ["debugMode", "optimize"],
+			"versions": ["Travis"],
 		}
 	}
 }

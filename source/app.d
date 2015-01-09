@@ -69,6 +69,11 @@ void main()
 			)
 		.array;
 
+	version(Travis)
+	{
+		paramsTupleArray = paramsTupleArray[0 .. min(16, $)];
+	}
+
 	foreach(i, paramsTuple; paramsTupleArray.parallel(1))
 	{
 		immutable lambda     = paramsTuple[0];
