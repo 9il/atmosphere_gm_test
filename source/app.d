@@ -18,6 +18,25 @@ import std.stdio;
 import atmosphere;
 import distribution;
 
+class GeneralizedInverseGaussianCDF(T): NumericCDF!T
+{
+	this(T lambda, T chi, T psi)
+	{
+		immutable mu = 0;
+		auto pdf = new GeneralizedInverseGaussianPDF!T(lambda, chi, psi);
+		immutable expectation = E_GIG!T(lambda, chi, psi);				
+		super(pdf, [expectation]);
+	}
+}
+
+class GeneralizedInverseGaussianQuantile(T) : NumericQuantile!T
+{
+	this(T lambda, T chi, T psi)
+	{
+		super(new GeneralizedInverseGaussianCDF!T(lambda, chi, psi), -1000, 1000);	
+	}
+}
+
 immutable lambdaArray      = [0.15, 0.5, 1.4];
 immutable betaArray        = [-0.5, 0.05, 0.2, 0.7, 2, 5];
 immutable chiArray         = [0.7, 1.8];
@@ -169,24 +188,5 @@ void main()
 			sw.stop;
 			app.formattedWrite("%s,%s ms,%s,%s\n", iterCount, sw.peek.msecs, optimizer.log2Likelihood, optimizer.beta);
 		}
-	}
-}
-
-class GeneralizedInverseGaussianCDF(T): NumericCDF!T
-{
-	this(T lambda, T chi, T psi)
-	{
-		immutable mu = 0;
-		auto pdf = new GeneralizedInverseGaussianPDF!T(lambda, chi, psi);
-		immutable expectation = E_GIG!T(lambda, chi, psi);				
-		super(pdf, [expectation]);
-	}
-}
-
-class GeneralizedInverseGaussianQuantile(T) : NumericQuantile!T
-{
-	this(T lambda, T chi, T psi)
-	{
-		super(new GeneralizedInverseGaussianCDF!T(lambda, chi, psi), -1000, 1000);	
 	}
 }
