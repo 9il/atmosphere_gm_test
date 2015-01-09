@@ -1,4 +1,4 @@
-sample_size,lambda,beta,chi,psi,algorithm,iterations,time ms,log2Likelihood,betaEst
+sampleSize,lambda,beta,chi,psi,algorithm,iterations,time ms,log2Likelihood,betaEst
 1000,0.15,0.05,0.7,0.1,GradientLikelihoodMaximization!double,66,30 ms,-3284.43,-
 1000,0.15,0.05,0.7,0.1,CoordinateLikelihoodMaximization!double,45,100 ms,-3284.31,-
 1000,0.15,0.05,0.7,0.1,NormalVarianceMeanMixtureEM!double,128,139 ms,-3283.45,0.0644398
