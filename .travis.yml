@@ -3,8 +3,8 @@ os:
   - linux
   - osx
 d:
-  - dmd
-  - ldc
+  - dmd-2.066.1
+  - ldc-0.15.1
 script: dub test --build=travis --compiler=${DMD}
 before_install:
   - sudo apt-get update
