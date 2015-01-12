@@ -1,5 +1,5 @@
 {
-	"name": "test",
+	"name": "atmosphere_gm_test",
 	"description": "Statistical package atmosphere_gm, test",
 	"homepage": "http://github.com/9il/atmosphere_gm_test",
 	"copyright": "Copyright © 2014 Ilya Yaroshenko",
@@ -8,7 +8,7 @@
 		"Ilya Yaroshenko"
 	],
 	"dependencies": {
-		"atmosphere_gm": ">=0.0.8"
+		"atmosphere_gm": ">=0.0.9"
 	},
 	"license": "Subject to the terms of the MIT license, as written in the included LICENSE.md file.",
 	"buildTypes": {
@@ -19,5 +19,5 @@
 			"buildOptions": ["debugMode", "optimize"],
 			"versions": ["Travis"],
 		}
-	}
+	},
 }
