@@ -1,5 +1,11 @@
 language: d
-script: dub --build=travis
+os:
+  - linux
+  - osx
+d:
+  - dmd
+  - ldc
+script: dub test --build=travis --compiler=${DMD}
 before_install:
   - sudo apt-get update
   - sudo apt-get install liblapack-dev
