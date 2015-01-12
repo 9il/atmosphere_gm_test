@@ -12,9 +12,13 @@ import std.path;
 import std.random;
 import std.range;
 import std.stdio;
+import std.traits;
 
 import atmosphere;
 import distribution;
+
+alias F = double;
+static assert(isFloatingPoint!F);
 
 class GeneralizedInverseGaussianCDF(T): NumericCDF!T
 {
@@ -49,7 +53,7 @@ immutable minIter          = 100;
 immutable CSVHead          = `sampleSize,lambda,beta,chi,psi,algorithm,iterations,time ms,log2Likelihood,betaEst`;
 
 // lambda, beta, chi, psi, sampleSize
-alias ParamsTuple          = Tuple!(double, double, double, double, int);
+alias ParamsTuple          = Tuple!(F, F, F, F, int);
 
 void main()
 {
@@ -86,9 +90,9 @@ void main()
 		immutable psi        = paramsTuple[3];
 		immutable sampleSize = paramsTuple[4];
 		// GIG quantile function
-		auto qf              = new GeneralizedInverseGaussianQuantile!double(lambda, chi, psi);
+		auto qf              = new GeneralizedInverseGaussianQuantile!F(lambda, chi, psi);
 		// GHyp random number generator
-		auto rng             = new GeneralizedHyperbolicRNG!double(rndGen, lambda, beta, chi, psi);
+		auto rng             = new GeneralizedHyperbolicRNG!F(rndGen, lambda, beta, chi, psi);
 		// string appender for output
 		auto app             = appender!string;
 		scope(success) synchronized
@@ -107,7 +111,7 @@ void main()
 			.array;
 		// Normal PDFs for common algorithms
 		immutable pdfs       = grid
-			.map!(u => immutable NormalVarianceMeanMixture!double.PDF(beta, u))
+			.map!(u => immutable NormalVarianceMeanMixture!F.PDF(beta, u))
 			.array;
 		// GHyp sample
 		immutable sample     = rng
@@ -131,8 +135,8 @@ void main()
 
 		///Common algorithms
 		foreach(Algo; TypeTuple!(
-			GradientLikelihoodMaximization!double, 
-			CoordinateLikelihoodMaximization!double,
+			GradientLikelihoodMaximization!F, 
+			CoordinateLikelihoodMaximization!F,
 			))
 		{
 			app.formattedWrite("%s,%s,%s,%s,%s,%s,", sampleSize, lambda, beta, chi, psi, Algo.stringof);
@@ -162,9 +166,9 @@ void main()
 
 		///Special beta-parametrized EM algorithms
 		foreach(Algo; TypeTuple!(
-			NormalVarianceMeanMixtureEM!double, 
-			NormalVarianceMeanMixtureEMAndGradient!double, 
-			NormalVarianceMeanMixtureEMAndCoordinate!double,
+			NormalVarianceMeanMixtureEM!F, 
+			NormalVarianceMeanMixtureEMAndGradient!F, 
+			NormalVarianceMeanMixtureEMAndCoordinate!F,
 			))
 		{
 			app.formattedWrite("%s,%s,%s,%s,%s,%s,", sampleSize, lambda, beta, chi, psi, Algo.stringof);
@@ -186,7 +190,7 @@ void main()
 			catch (FeaturesException e)
 			{
 				sw.stop;
-				app.formattedWrite("%s,%s ms,%s,%s\n", iterCount, sw.peek.msecs, "FeaturesException", double.nan);
+				app.formattedWrite("%s,%s ms,%s,%s\n", iterCount, sw.peek.msecs, "FeaturesException", F.nan);
 				continue;
 			}
 			sw.stop;
