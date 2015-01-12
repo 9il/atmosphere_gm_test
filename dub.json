@@ -20,4 +20,6 @@
 			"versions": ["Travis"],
 		}
 	},
+	"dflags-ldc": ["-mcpu=native"],
+	"dflags-gdc": ["-march=native"],
 }
