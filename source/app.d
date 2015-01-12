@@ -43,8 +43,8 @@ immutable sampleSizeArray  = [1000, 10000];
 immutable quantileLeftArg  = 0.02;
 immutable quantileRightArg = 0.98;
 immutable gridSize         = 50;
-immutable eps              = 1e-3;
-immutable maxIter          = 1000;
+immutable eps              = 1e-5;
+immutable maxIter          = 10000;
 immutable minIter          = 100;
 immutable CSVHead          = `sampleSize,lambda,beta,chi,psi,algorithm,iterations,time ms,log2Likelihood,betaEst`;
 
@@ -55,8 +55,6 @@ void main()
 {
 	writeln("Total threads: ", totalCPUs);
 
-	auto fout = File("view/nvmm_test.csv", "w");
-	fout.writeln(CSVHead);
 	auto paramsTupleArray = 
 		cartesianProduct(
 			lambdaArray    .dup,
@@ -67,9 +65,17 @@ void main()
 			)
 		.array;
 
+
+
 	version(Travis)
 	{
 		paramsTupleArray = paramsTupleArray[0 .. min(16, $)];
+		auto fout = stdout;
+	}
+	else
+	{
+		auto fout = File("view/nvmm_test.csv", "w");
+		fout.writeln(CSVHead);
 	}
 
 	foreach(i, paramsTuple; paramsTupleArray.parallel(1))
@@ -108,7 +114,7 @@ void main()
 			.take(sampleSize)
 			.array
 			.assumeUnique;
-		//auto lineOut     = appender!string;
+
 		synchronized 
 			writefln(
 				"cpu %s start [ %s / %s ]: GIGBounds = [%8g .. %8g] GHypParams = (lambda= %4g beta= %4g chi= %4g psi= %4g)",
@@ -130,23 +136,19 @@ void main()
 			))
 		{
 			app.formattedWrite("%s,%s,%s,%s,%s,%s,", sampleSize, lambda, beta, chi, psi, Algo.stringof);
-
-			static if(__traits(isSame, Algo , CoordinateLikelihoodMaximization))
-				immutable maxIter = .maxIter / 16;
-
 			StopWatch sw;
 			size_t iterCount;
 			auto optimizer = new Algo(pdfs.length, sample.length);
 			sw.start;
 			try
 			{
-				optimizer.putAndSetWeightsInProportionToLikelihood(pdfs, sample);
-				optimizer.optimize( ///optimization
-					(log2LikelihoodPrev, log2Likelihood) 
-					{
-						iterCount++;
-						return iterCount >= maxIter || log2Likelihood - log2LikelihoodPrev <= eps;
-					});				
+				optimizer.put(pdfs, sample);
+				while(sw.peek.msecs < 1000)
+				{
+					iterCount++;
+					// See also `optimize` method to handle optimization with tolerance.
+					optimizer.eval();				
+				}
 			}
 			catch (FeaturesException e)
 			{
@@ -158,7 +160,7 @@ void main()
 			app.formattedWrite("%s,%s ms,%s,%s\n", iterCount, sw.peek.msecs, optimizer.log2Likelihood, "-");
 		}
 
-		///Special α-parametrized EM algorithms
+		///Special beta-parametrized EM algorithms
 		foreach(Algo; TypeTuple!(
 			NormalVarianceMeanMixtureEM!double, 
 			NormalVarianceMeanMixtureEMAndGradient!double, 
@@ -174,13 +176,12 @@ void main()
 			try 
 			{
 				optimizer.sample = sample;
-				optimizer.optimize( ///optimization
-					//tolerance
-					(alphaPrev, beta, double log2LikelihoodPrev, double log2Likelihood)
-					{
-						iterCount++;
-						return iterCount >= maxIter || iterCount >= minIter && log2Likelihood - log2LikelihoodPrev <= eps;
-					});				
+				while(sw.peek.msecs < 1000)
+				{
+					iterCount++;
+					// See also `optimize` method to handle optimization with tolerance.
+					optimizer.eval();				
+				}		
 			}
 			catch (FeaturesException e)
 			{
