@@ -20,22 +20,12 @@ import distribution;
 alias F = double;
 static assert(isFloatingPoint!F);
 
-class GeneralizedInverseGaussianCDF(T): NumericCDF!T
+final class ProperGeneralizedInverseGaussianQuantile(T) : NumericQuantile!T
 {
-	this(T lambda, T chi, T psi)
+	this(T lambda, T eta, T omega)
 	{
-		immutable mu = 0;
-		auto pdf = new GeneralizedInverseGaussianPDF!T(lambda, chi, psi);
-		immutable expectation = E_GIG!T(lambda, chi, psi);				
-		super(pdf, [expectation]);
-	}
-}
-
-class GeneralizedInverseGaussianQuantile(T) : NumericQuantile!T
-{
-	this(T lambda, T chi, T psi)
-	{
-		super(new GeneralizedInverseGaussianCDF!T(lambda, chi, psi), -1000, 1000);	
+		auto cdf = new ProperGeneralizedInverseGaussianCDF!T(lambda, eta, omega);
+		super(cdf, -1000, 1000);	
 	}
 }
 
@@ -89,8 +79,9 @@ void main()
 		immutable chi        = paramsTuple[2];
 		immutable psi        = paramsTuple[3];
 		immutable sampleSize = paramsTuple[4];
+		immutable params = GIGChiPsi!F(chi, psi);
 		// GIG quantile function
-		auto qf              = new GeneralizedInverseGaussianQuantile!F(lambda, chi, psi);
+		auto qf              = new ProperGeneralizedInverseGaussianQuantile!F(lambda, params.eta, params.omega);
 		// GHyp random number generator
 		auto rng             = new GeneralizedHyperbolicRNG!F(rndGen, lambda, beta, chi, psi);
 		// string appender for output
