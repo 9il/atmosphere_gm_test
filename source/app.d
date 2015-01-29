@@ -83,7 +83,7 @@ void main()
 		// GIG quantile function
 		auto qf              = new ProperGeneralizedInverseGaussianQuantile!F(lambda, params.eta, params.omega);
 		// GHyp random number generator
-		auto rng             = new GeneralizedHyperbolicRNG!F(rndGen, lambda, beta, chi, psi);
+		auto rng             = new GeneralizedHyperbolicRNG!F(rndGen, lambda, chi, psi, beta);
 		// string appender for output
 		auto app             = appender!string;
 		scope(success) synchronized
