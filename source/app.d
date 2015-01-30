@@ -133,7 +133,7 @@ void main()
 			try
 			{
 				optimizer.put(pdfs, sample);
-				while(sw.peek.msecs < 1000)
+				while(sw.peek.msecs < 500)
 				{
 					iterCount++;
 					// See also `optimize` method to handle optimization with tolerance.
@@ -166,7 +166,7 @@ void main()
 			try 
 			{
 				optimizer.sample = sample;
-				while(sw.peek.msecs < 1000)
+				while(sw.peek.msecs < 500)
 				{
 					iterCount++;
 					// See also `optimize` method to handle optimization with tolerance.
