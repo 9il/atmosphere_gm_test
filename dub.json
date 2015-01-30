@@ -8,7 +8,7 @@
 		"Ilya Yaroshenko"
 	],
 	"dependencies": {
-		"atmosphere_gm": "==0.0.11"
+		"atmosphere_gm": "==0.0.12"
 	},
 	"license": "MIT License",
 	"buildTypes": {
