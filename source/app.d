@@ -29,20 +29,17 @@ final class ProperGeneralizedInverseGaussianQuantile(T) : NumericQuantile!T
 	}
 }
 
-immutable lambdaArray      = [0.15, 0.5, 1.4];
-immutable betaArray        = [-0.5, 0.05, 0.2, 0.7, 2, 5];
-immutable chiArray         = [0.7, 1.8];
-immutable psiArray         = [0.1, 0.6, 1.1, 4];
+immutable F[]
+		lambdaArray = [0.25, 0.5, 1, 2, 4],
+		etaArray = [1.0],
+		omegaArray = [0.25, 0.5, 1, 2, 4],
+		betaArray = [0.0, 0.25, 0.5, 1, 2, 4];
 immutable sampleSizeArray  = [1000, 10000];
-immutable quantileLeftArg  = 0.02;
-immutable quantileRightArg = 0.98;
+immutable quantileLeftArg  = 0.01;
+immutable quantileRightArg = 0.99;
 immutable gridSize         = 50;
-immutable eps              = 1e-5;
-immutable maxIter          = 10000;
-immutable minIter          = 100;
-immutable CSVHead          = `sampleSize,lambda,beta,chi,psi,algorithm,iterations,time ms,log2Likelihood,betaEst`;
+immutable CSVHead          = `sampleSize,lambda,eta,omega,beta,algorithm,iterations,time ms,log2Likelihood,betaEst`;
 
-// lambda, beta, chi, psi, sampleSize
 alias ParamsTuple          = Tuple!(F, F, F, F, int);
 
 void main()
@@ -51,15 +48,13 @@ void main()
 
 	auto paramsTupleArray = 
 		cartesianProduct(
-			lambdaArray    .dup,
-			betaArray      .dup,
-			chiArray       .dup,
-			psiArray       .dup,
+			lambdaArray.dup,
+			etaArray.dup,
+			omegaArray.dup,
+			betaArray.dup,
 			sampleSizeArray.dup,
 			)
 		.array;
-
-
 
 	version(Travis)
 	{
@@ -75,15 +70,14 @@ void main()
 	foreach(i, paramsTuple; paramsTupleArray.parallel(1))
 	{
 		immutable lambda     = paramsTuple[0];
-		immutable beta       = paramsTuple[1]; 
-		immutable chi        = paramsTuple[2];
-		immutable psi        = paramsTuple[3];
+		immutable eta        = paramsTuple[1]; 
+		immutable omega      = paramsTuple[2];
+		immutable beta       = paramsTuple[3];
 		immutable sampleSize = paramsTuple[4];
-		immutable params = GIGChiPsi!F(chi, psi);
 		// GIG quantile function
-		auto qf              = new ProperGeneralizedInverseGaussianQuantile!F(lambda, params.eta, params.omega);
+		auto qf              = new ProperGeneralizedInverseGaussianQuantile!F(lambda, eta, omega);
 		// GHyp random number generator
-		auto rng             = new GeneralizedHyperbolicRNG!F(rndGen, lambda, chi, psi, beta);
+		auto rng             = new ProperGeneralizedHyperbolicRNG!F(rndGen, lambda, eta, omega, beta);
 		// string appender for output
 		auto app             = appender!string;
 		scope(success) synchronized
@@ -112,25 +106,26 @@ void main()
 
 		synchronized 
 			writefln(
-				"cpu %s start [ %s / %s ]: GIGBounds = [%8g .. %8g] GHypParams = (lambda= %4g beta= %4g chi= %4g psi= %4g)",
+				"cpu %s start [ %s / %s ]: GIGBounds = [%8g .. %8g] GHypParams = (lambda= %4g eta= %4g omega= %4g beta= %4g)",
 				taskPool.workerIndex+1,
 				i+1, 
 				paramsTupleArray.length,
 				begin,
 				end,
 				lambda,
+				eta,
+				omega,
 				beta,
-				chi,
-				psi,
 				);
 
 		///Common algorithms
 		foreach(Algo; TypeTuple!(
-			GradientLikelihoodMaximization!F, 
+			EMLikelihoodMaximization!F,
+			GradientLikelihoodMaximization!F,
 			CoordinateLikelihoodMaximization!F,
 			))
 		{
-			app.formattedWrite("%s,%s,%s,%s,%s,%s,", sampleSize, lambda, beta, chi, psi, Algo.stringof);
+			app.formattedWrite("%s,%s,%s,%s,%s,%s,", sampleSize, lambda, eta, omega, beta, Algo.stringof);
 			StopWatch sw;
 			size_t iterCount;
 			auto optimizer = new Algo(pdfs.length, sample.length);
@@ -162,7 +157,7 @@ void main()
 			NormalVarianceMeanMixtureEMAndCoordinate!F,
 			))
 		{
-			app.formattedWrite("%s,%s,%s,%s,%s,%s,", sampleSize, lambda, beta, chi, psi, Algo.stringof);
+			app.formattedWrite("%s,%s,%s,%s,%s,%s,", sampleSize, lambda, eta, omega, beta, Algo.stringof);
 
 			StopWatch sw;
 			size_t iterCount;
