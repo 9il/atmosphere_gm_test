@@ -16,16 +16,13 @@ alias F = double;
 void main()
 {
 	writeln("Total threads: ", totalCPUs);
+	nothrow @nogc bool tolerance(F a, F b) { return b/a < 1.001;}
 	immutable F[]
 		lambdaArray = [0.25, 0.5, 1, 2, 4],
 		etaArray = [1.0],
 		omegaArray = [0.25, 0.5, 1, 2, 4],
 		betaArray = [0.0, 0.25, 0.5, 1, 2, 4];
 	immutable sampleSizeArray  = [1000, 10000];
-	immutable quantileLeftArg  = 0.01;
-	immutable quantileRightArg = 0.99;
-	immutable gridSize         = 50;
-	immutable CSVHead          = `sampleSize,lambda,eta,omega,beta,algorithm,iterations,time ms,log2Likelihood,betaEst`;
 	auto paramsTupleArray = cartesianProduct(
 		lambdaArray.dup,
 		etaArray.dup,
@@ -33,6 +30,19 @@ void main()
 		betaArray.dup,
 		sampleSizeArray.dup,
 		).array;
+	immutable quantileLeftArg  = 0.01;
+	immutable quantileRightArg = 0.99;
+	immutable gridSize = 100;
+	immutable msecs = 1000;
+	auto indexesR = new size_t[gridSize];
+	auto indexesS = new size_t[gridSize];
+	foreach(j, ref index; indexesR)
+	{
+		index = uniform(0, size_t.max);
+		indexesS[j] = j;
+	}
+	makeIndex(indexesR, indexesS);
+	immutable CSVHead          = `sampleSize,lambda,eta,omega,beta,algorithm,iterations,time ms,log2Likelihood,betaEst`;
 	version(Travis)
 	{
 		paramsTupleArray = paramsTupleArray[0 .. min(8, $)];
@@ -65,7 +75,10 @@ void main()
 		// GIG grid
 		immutable grid       = iota(begin, end+step/2, step).array;
 		// Normal PDFs for common algorithms
-		immutable pdfs       = grid.map!(u => immutable NormalVarianceMeanMixture!F.PDF(beta, u)).array;
+		auto pdfs       = grid
+			.map!(u => NormalVarianceMeanMixture!F.PDF(beta, u))
+			.indexed(indexesS) //random permutation
+			.array;
 		// GHyp sample
 		immutable sample     = rng.take(sampleSize).array.assumeUnique;
 		scope(success) synchronized
@@ -97,24 +110,23 @@ void main()
 			StopWatch sw;
 			size_t iterCount;
 			auto optimizer = new Algo(pdfs.length, sample.length);
-			sw.start;
 			try
 			{
 				optimizer.put(pdfs, sample);
-				while(sw.peek.msecs < 1000)
+				while(sw.peek.msecs < msecs)
 				{
 					iterCount++;
 					// See also `optimize` method to handle optimization with tolerance.
-					optimizer.eval();				
+					sw.start;
+					optimizer.eval(&tolerance);				
+					sw.stop;
 				}
 			}
 			catch (FeaturesException e)
 			{
-				sw.stop;
 				app.formattedWrite("%s,%s ms,%s,%s\n", iterCount, sw.peek.msecs, "FeaturesException", "-");
 				continue;
 			}
-			sw.stop;
 			app.formattedWrite("%s,%s ms,%s,%s\n", iterCount, sw.peek.msecs, optimizer.log2Likelihood, "-");
 		}
 		///Special beta-parametrized EM algorithms
@@ -129,24 +141,23 @@ void main()
 			StopWatch sw;
 			size_t iterCount;
 			auto optimizer = new Algo(grid, sample.length);
-			sw.start;
 			try 
 			{
 				optimizer.sample = sample;
-				while(sw.peek.msecs < 1000)
+				while(sw.peek.msecs < msecs)
 				{
 					iterCount++;
 					// See also `optimize` method to handle optimization with tolerance.
-					optimizer.eval();				
+					sw.start;
+					optimizer.eval(&tolerance);				
+					sw.stop;
 				}		
 			}
 			catch (FeaturesException e)
 			{
-				sw.stop;
 				app.formattedWrite("%s,%s ms,%s,%s\n", iterCount, sw.peek.msecs, "FeaturesException", F.nan);
 				continue;
 			}
-			sw.stop;
 			app.formattedWrite("%s,%s ms,%s,%s\n", iterCount, sw.peek.msecs, optimizer.log2Likelihood, optimizer.beta);
 		}
 	}
