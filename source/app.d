@@ -58,7 +58,7 @@ void main()
 
 	version(Travis)
 	{
-		paramsTupleArray = paramsTupleArray[0 .. min(16, $)];
+		paramsTupleArray = paramsTupleArray[0 .. min(8, $)];
 		auto fout = stdout;
 	}
 	else
@@ -133,7 +133,7 @@ void main()
 			try
 			{
 				optimizer.put(pdfs, sample);
-				while(sw.peek.msecs < 500)
+				while(sw.peek.msecs < 1000)
 				{
 					iterCount++;
 					// See also `optimize` method to handle optimization with tolerance.
@@ -166,7 +166,7 @@ void main()
 			try 
 			{
 				optimizer.sample = sample;
-				while(sw.peek.msecs < 500)
+				while(sw.peek.msecs < 1000)
 				{
 					iterCount++;
 					// See also `optimize` method to handle optimization with tolerance.
