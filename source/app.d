@@ -1,61 +1,38 @@
 import std.algorithm;
-import std.conv;
-import std.csv;
 import std.datetime;
 import std.exception;
-import std.file;
 import std.format;
-import std.functional;
-import std.math;
 import std.parallelism;
-import std.path;
 import std.random;
 import std.range;
 import std.stdio;
 import std.traits;
-
+import std.typecons;
 import atmosphere;
 import distribution;
 
 alias F = double;
-static assert(isFloatingPoint!F);
-
-final class ProperGeneralizedInverseGaussianQuantile(T) : NumericQuantile!T
-{
-	this(T lambda, T eta, T omega)
-	{
-		auto cdf = new ProperGeneralizedInverseGaussianCDF!T(lambda, eta, omega);
-		super(cdf, -1000, 1000);	
-	}
-}
-
-immutable F[]
-		lambdaArray = [0.25, 0.5, 1, 2, 4],
-		etaArray = [1.0],
-		omegaArray = [0.25, 0.5, 1, 2, 4],
-		betaArray = [0.0, 0.25, 0.5, 1, 2, 4];
-immutable sampleSizeArray  = [1000, 10000];
-immutable quantileLeftArg  = 0.01;
-immutable quantileRightArg = 0.99;
-immutable gridSize         = 50;
-immutable CSVHead          = `sampleSize,lambda,eta,omega,beta,algorithm,iterations,time ms,log2Likelihood,betaEst`;
-
-alias ParamsTuple          = Tuple!(F, F, F, F, int);
 
 void main()
 {
 	writeln("Total threads: ", totalCPUs);
-
-	auto paramsTupleArray = 
-		cartesianProduct(
-			lambdaArray.dup,
-			etaArray.dup,
-			omegaArray.dup,
-			betaArray.dup,
-			sampleSizeArray.dup,
-			)
-		.array;
-
+	immutable F[]
+		lambdaArray = [0.25, 0.5, 1, 2, 4],
+		etaArray = [1.0],
+		omegaArray = [0.25, 0.5, 1, 2, 4],
+		betaArray = [0.0, 0.25, 0.5, 1, 2, 4];
+	immutable sampleSizeArray  = [1000, 10000];
+	immutable quantileLeftArg  = 0.01;
+	immutable quantileRightArg = 0.99;
+	immutable gridSize         = 50;
+	immutable CSVHead          = `sampleSize,lambda,eta,omega,beta,algorithm,iterations,time ms,log2Likelihood,betaEst`;
+	auto paramsTupleArray = cartesianProduct(
+		lambdaArray.dup,
+		etaArray.dup,
+		omegaArray.dup,
+		betaArray.dup,
+		sampleSizeArray.dup,
+		).array;
 	version(Travis)
 	{
 		paramsTupleArray = paramsTupleArray[0 .. min(8, $)];
@@ -66,7 +43,6 @@ void main()
 		auto fout = File("view/nvmm_test.csv", "w");
 		fout.writeln(CSVHead);
 	}
-
 	foreach(i, paramsTuple; paramsTupleArray.parallel(1))
 	{
 		immutable lambda     = paramsTuple[0];
@@ -80,11 +56,6 @@ void main()
 		auto rng             = new ProperGeneralizedHyperbolicRNG!F(rndGen, lambda, eta, omega, beta);
 		// string appender for output
 		auto app             = appender!string;
-		scope(success) synchronized
-		{
-			fout.write(app.data);
-			fout.flush;
-		}
 		// left GIG bound
 		immutable begin      = qf(quantileLeftArg);
 		// right GIG bound
@@ -92,18 +63,16 @@ void main()
 		// grid's step
 		immutable step       = (end-begin)/gridSize;
 		// GIG grid
-		immutable grid       = iota(begin, end+step/2, step)
-			.array;
+		immutable grid       = iota(begin, end+step/2, step).array;
 		// Normal PDFs for common algorithms
-		immutable pdfs       = grid
-			.map!(u => immutable NormalVarianceMeanMixture!F.PDF(beta, u))
-			.array;
+		immutable pdfs       = grid.map!(u => immutable NormalVarianceMeanMixture!F.PDF(beta, u)).array;
 		// GHyp sample
-		immutable sample     = rng
-			.take(sampleSize)
-			.array
-			.assumeUnique;
-
+		immutable sample     = rng.take(sampleSize).array.assumeUnique;
+		scope(success) synchronized
+		{
+			fout.write(app.data);
+			fout.flush;
+		}
 		synchronized 
 			writefln(
 				"cpu %s start [ %s / %s ]: GIGBounds = [%8g .. %8g] GHypParams = (lambda= %4g eta= %4g omega= %4g beta= %4g)",
@@ -117,7 +86,6 @@ void main()
 				omega,
 				beta,
 				);
-
 		///Common algorithms
 		foreach(Algo; TypeTuple!(
 			EMLikelihoodMaximization!F,
@@ -149,7 +117,6 @@ void main()
 			sw.stop;
 			app.formattedWrite("%s,%s ms,%s,%s\n", iterCount, sw.peek.msecs, optimizer.log2Likelihood, "-");
 		}
-
 		///Special beta-parametrized EM algorithms
 		foreach(Algo; TypeTuple!(
 			NormalVarianceMeanMixtureEM!F, 
@@ -182,5 +149,12 @@ void main()
 			sw.stop;
 			app.formattedWrite("%s,%s ms,%s,%s\n", iterCount, sw.peek.msecs, optimizer.log2Likelihood, optimizer.beta);
 		}
+	}
+}
+
+final class ProperGeneralizedInverseGaussianQuantile(T) : NumericQuantile!T {
+	this(T lambda, T eta, T omega) {
+		auto cdf = new ProperGeneralizedInverseGaussianCDF!T(lambda, eta, omega);
+		super(cdf, -1000, 1000);	
 	}
 }
