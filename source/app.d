@@ -34,14 +34,7 @@ void main()
 	immutable quantileRightArg = 0.99;
 	immutable gridSize = 100;
 	immutable msecs = 1000;
-	auto indexesR = new size_t[gridSize];
-	auto indexesS = new size_t[gridSize];
-	foreach(j, ref index; indexesR)
-	{
-		index = uniform(0, size_t.max);
-		indexesS[j] = j;
-	}
-	makeIndex(indexesR, indexesS);
+	immutable indexes = cast(immutable) randomPermutation(gridSize);
 	immutable CSVHead          = `sampleSize,lambda,eta,omega,beta,algorithm,iterations,time ms,log2Likelihood,betaEst`;
 	version(Travis)
 	{
@@ -76,8 +69,8 @@ void main()
 		immutable grid       = iota(begin, end+step/2, step).array;
 		// Normal PDFs for common algorithms
 		auto pdfs       = grid
-			.map!(u => NormalVarianceMeanMixture!F.PDF(beta, u))
-			.indexed(indexesS) //random permutation
+			.map!(u => NvmmLikelihoodAscentEM!F.CorePDF(beta, u))
+			.indexed(indexes) //random permutation
 			.array;
 		// GHyp sample
 		immutable sample     = rng.take(sampleSize).array.assumeUnique;
@@ -101,64 +94,41 @@ void main()
 				);
 		///Common algorithms
 		foreach(Algo; TypeTuple!(
-			EMLikelihoodMaximization!F,
-			GradientLikelihoodMaximization!F,
-			CoordinateLikelihoodMaximization!F,
+			LikelihoodAscentEM,
+			LikelihoodAscentGradient,
+			LikelihoodAscentCoordinate,
 			))
 		{
-			app.formattedWrite("%s,%s,%s,%s,%s,%s,", sampleSize, lambda, eta, omega, beta, Algo.stringof);
-			StopWatch sw;
-			size_t iterCount;
-			auto optimizer = new Algo(pdfs.length, sample.length);
+			app.formattedWrite("%s,%s,%s,%s,%s,%s,", sampleSize, lambda, eta, omega, beta, Algo!F.stringof);
+			auto optimizer = new Algo!F(pdfs.length, sample.length);
 			try
-			{
 				optimizer.put(pdfs, sample);
-				while(sw.peek.msecs < msecs)
-				{
-					iterCount++;
-					// See also `optimize` method to handle optimization with tolerance.
-					sw.start;
-					optimizer.eval(&tolerance);				
-					sw.stop;
-				}
-			}
 			catch (FeaturesException e)
 			{
-				app.formattedWrite("%s,%s ms,%s,%s\n", iterCount, sw.peek.msecs, "FeaturesException", "-");
+				app.formattedWrite("%s,%s ms,%s,%s\n", 0, 0, "FeaturesException", "-");
 				continue;
 			}
-			app.formattedWrite("%s,%s ms,%s,%s\n", iterCount, sw.peek.msecs, optimizer.log2Likelihood, "-");
+			with(optimizer.evaluate(TickDuration.from!"msecs"(msecs), &tolerance))
+				app.formattedWrite("%s,%s ms,%s,%s\n", itersCount, duration, optimizer.log2Likelihood, "-");
 		}
 		///Special beta-parametrized EM algorithms
 		foreach(Algo; TypeTuple!(
-			NormalVarianceMeanMixtureEM!F, 
-			NormalVarianceMeanMixtureEMAndGradient!F, 
-			NormalVarianceMeanMixtureEMAndCoordinate!F,
+			NvmmLikelihoodAscentEMEM,
+			NvmmLikelihoodAscentEMGradient,
+			NvmmLikelihoodAscentEMCoordinate,
 			))
 		{
-			app.formattedWrite("%s,%s,%s,%s,%s,%s,", sampleSize, lambda, eta, omega, beta, Algo.stringof);
-
-			StopWatch sw;
-			size_t iterCount;
-			auto optimizer = new Algo(grid, sample.length);
+			app.formattedWrite("%s,%s,%s,%s,%s,%s,", sampleSize, lambda, eta, omega, beta, Algo!F.stringof);
+			auto optimizer = new Algo!F(grid, sample.length);
 			try 
-			{
 				optimizer.sample = sample;
-				while(sw.peek.msecs < msecs)
-				{
-					iterCount++;
-					// See also `optimize` method to handle optimization with tolerance.
-					sw.start;
-					optimizer.eval(&tolerance);				
-					sw.stop;
-				}		
-			}
 			catch (FeaturesException e)
 			{
-				app.formattedWrite("%s,%s ms,%s,%s\n", iterCount, sw.peek.msecs, "FeaturesException", F.nan);
+				app.formattedWrite("%s,%s ms,%s,%s\n", 0, 0, "FeaturesException", F.nan);
 				continue;
 			}
-			app.formattedWrite("%s,%s ms,%s,%s\n", iterCount, sw.peek.msecs, optimizer.log2Likelihood, optimizer.beta);
+			with(optimizer.evaluate(TickDuration.from!"msecs"(msecs), &tolerance))
+				app.formattedWrite("%s,%s ms,%s,%s\n", itersCount, duration, optimizer.log2Likelihood, optimizer.beta);
 		}
 	}
 }
