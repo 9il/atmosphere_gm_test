@@ -9,7 +9,6 @@ import std.stdio;
 import std.traits;
 import std.typecons;
 import atmosphere;
-import distribution;
 
 alias F = double;
 
@@ -35,7 +34,7 @@ void main()
 	immutable gridSize = 100;
 	immutable msecs = 1000;
 	immutable indexes = cast(immutable) randomPermutation(gridSize);
-	immutable CSVHead          = `sampleSize,lambda,eta,omega,beta,algorithm,iterations,time ms,log2Likelihood,betaEst`;
+	immutable CSVHead          = `sampleSize,lambda,eta,omega,beta,algorithm,iterations,time ms,likelihood,betaEst`;
 	version(Travis)
 	{
 		paramsTupleArray = paramsTupleArray[0 .. min(8, $)];
@@ -109,7 +108,7 @@ void main()
 				continue;
 			}
 			with(optimizer.evaluate(TickDuration.from!"msecs"(msecs), &tolerance))
-				app.formattedWrite("%s,%s ms,%s,%s\n", itersCount, duration, optimizer.log2Likelihood, "-");
+				app.formattedWrite("%s,%s ms,%s,%s\n", itersCount, duration, optimizer.likelihood, "-");
 		}
 		///Special beta-parametrized EM algorithms
 		foreach(Algo; TypeTuple!(
@@ -128,7 +127,7 @@ void main()
 				continue;
 			}
 			with(optimizer.evaluate(TickDuration.from!"msecs"(msecs), &tolerance))
-				app.formattedWrite("%s,%s ms,%s,%s\n", itersCount, duration, optimizer.log2Likelihood, optimizer.beta);
+				app.formattedWrite("%s,%s ms,%s,%s\n", itersCount, duration, optimizer.likelihood, optimizer.beta);
 		}
 	}
 }
