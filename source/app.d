@@ -8,6 +8,8 @@ import std.range;
 import std.stdio;
 import std.traits;
 import std.typecons;
+import std.typetuple;
+
 import atmosphere;
 
 alias F = double;
