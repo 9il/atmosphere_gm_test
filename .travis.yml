@@ -13,3 +13,5 @@ addons:
     packages:
       - libblas-dev
       - liblapack-dev
+
+script: dub test --build=travis --compiler=${DMD}
